@@ -1,6 +1,6 @@
 import os
 from typing import BinaryIO
-
+    
 
 def find_chunk_boundaries(
     file: BinaryIO,
@@ -20,7 +20,7 @@ def find_chunk_boundaries(
 
     chunk_size = file_size // desired_num_chunks
 
-    # Initial guesses for chunk boundary locations, uniformly spaced
+    # Initial 1guesses for chunk boundary locations, uniformly spaced
     # Chunks start on previous index, don't include last index
     chunk_boundaries = [i * chunk_size for i in range(desired_num_chunks + 1)]
     chunk_boundaries[-1] = file_size
