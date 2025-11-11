@@ -7,6 +7,8 @@ class Tokenizer:
         self.vocab = vocab
         self.merges = merges
         self.special_tokens = special_tokens or []
+        self.inv_vocab = {v: k for k, v in self.vocab.items()}
+        self.merge_ranks = {pair: i for i, pair in enumerate(self.merges)}
         for token in self.special_tokens:
             token_bytes = token.encode("utf-8")
             if token_bytes not in self.vocab.values():
@@ -35,16 +37,32 @@ class Tokenizer:
         return cls(vocab, merges, special_tokens)
 
     def encode(self, text:str):
+
         id_list = []
         PAT = re.compile(r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+""")
-        pretoken_words_list =re.findall(PAT, text)
-        # 先不考虑special token
-        for word in pretoken_words_list:
-        # 把word字符串转化成字节串 
-            bytes_word_list = [i for i in word.decode("utf-8")]
+
+
+        if self.special_tokens:
+            #用特殊token 切开文本正则 同时保留特殊token在列表
+            split_pattern = "(" + "|".join(re.escape(tok) for tok in self.special_tokens) + ")"
+        else:
+            split_pattern = None
+        if split_pattern:
+            parts = re.split(split_pattern, text)
+        else:
+            parts = [text]
             
+        for part in parts:
+            if not part:
+                continue
 
-        
-
-
-                
+            if part in self.special_tokens:
+                bytes_special_tokens = part.encode("utf-8")
+                tok_id = self.inv_vocab.get(bytes_special_tokens)
+                if tok_id is not None:
+                    id_list.append(tok_id)
+            else:
+                word_list =  PAT.findall(part)
+                for word in word_list:
+                    word_bytes = word.encode("utf-8")
+                    
