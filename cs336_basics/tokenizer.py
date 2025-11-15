@@ -1,6 +1,5 @@
 import json
 import regex as re
-from sympy import Id
 
 class Tokenizer:
 
