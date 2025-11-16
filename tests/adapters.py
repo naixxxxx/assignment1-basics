@@ -16,6 +16,9 @@ from cs336_basics.embedding import Embedding
 from cs336_basics.RMSNorm import RMSNorm
 from cs336_basics.SwiGLU_FFN import SwiGLU_FFN
 from cs336_basics.Rope import Rope
+from cs336_basics.attention import softmax,scaled_dot_product_attention ,CausalMultiheadSelfAttention
+
+
 
 def run_linear(
     d_in: int,
@@ -121,7 +124,7 @@ def run_scaled_dot_product_attention(
     Returns:
         Float[Tensor, " ... queries d_v"]: Output of SDPA
     """
-    raise NotImplementedError
+    return scaled_dot_product_attention(Q,K,V,mask)
 
 
 def run_multihead_self_attention(
@@ -155,8 +158,20 @@ def run_multihead_self_attention(
         Float[Tensor, " ... sequence_length d_out"]: Tensor with the output of running your optimized, batched multi-headed attention
         implementation with the given QKV projection weights and input features.
     """
-    raise NotImplementedError
+    attn = CausalMultiheadSelfAttention(
+        d_model=d_model,
+        num_heads=num_heads,
+        max_seq_len=None,
+        device=in_features.device,
+        dtype=in_features.dtype,
+    )
 
+    attn.W_q.load_state_dict({"W": q_proj_weight})
+    attn.W_k.load_state_dict({"W": k_proj_weight})
+    attn.W_v.load_state_dict({"W": v_proj_weight})
+    attn.W_o.load_state_dict({"W": o_proj_weight})
+
+    return attn(in_features)
 
 def run_multihead_self_attention_with_rope(
     d_model: int,
@@ -195,7 +210,21 @@ def run_multihead_self_attention_with_rope(
         Float[Tensor, " ... sequence_length d_out"]: Tensor with the output of running your optimized, batched multi-headed attention
         implementation with the given QKV projection weights and input features.
     """
-    raise NotImplementedError
+    attn = CausalMultiheadSelfAttention(
+        d_model=d_model,
+        num_heads=num_heads,
+        max_seq_len=max_seq_len,
+        theta=theta,
+        device=in_features.device,
+        dtype=in_features.dtype,
+    )
+
+    attn.W_q.load_state_dict({"W": q_proj_weight})
+    attn.W_k.load_state_dict({"W": k_proj_weight})
+    attn.W_v.load_state_dict({"W": v_proj_weight})
+    attn.W_o.load_state_dict({"W": o_proj_weight})
+
+    return attn(in_features, token_positions)
 
 
 def run_rope(
@@ -414,8 +443,7 @@ def run_silu(in_features: Float[Tensor, " ..."]) -> Float[Tensor, " ..."]:
         Float[Tensor,"..."]: of with the same shape as `in_features` with the output of applying
         SiLU to each element.
     """
-    raise NotImplementedError
-
+    return in_features * torch.sigmoid(in_features)
 
 def run_get_batch(
     dataset: npt.NDArray, batch_size: int, context_length: int, device: str
@@ -453,7 +481,7 @@ def run_softmax(in_features: Float[Tensor, " ..."], dim: int) -> Float[Tensor, "
         Float[Tensor, "..."]: Tensor of with the same shape as `in_features` with the output of
         softmax normalizing the specified `dim`.
     """
-    raise NotImplementedError
+    return softmax(in_features,dim)
 
 
 def run_cross_entropy(

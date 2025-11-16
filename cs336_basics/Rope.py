@@ -1,4 +1,3 @@
-from regex import D
 import torch 
 import torch.nn as nn
 
@@ -28,18 +27,40 @@ class Rope(nn.Module):
         self.cos = torch.cos(angle)
         self.sin = torch.sin(angle)
 
-    def forward(self, x: torch.Tensor, token_positions: torch.Tensor):
-        #先判断句子长度是不是超过了最长长度 如果超过了直接报错
+    def forward(self, x: torch.Tensor, token_positions: torch.Tensor | None = None):
+
         seq_len = x.size(-2)
+        #先判断句子长度是不是超过了最长长度 如果超过了直接报错
         if seq_len > self.max_seq_len:
             raise ValueError(
                 f"RoPE got seq_len={seq_len}, but max_seq_len={self.max_seq_len}. "
                 "Increase max_seq_len if you want to support longer sequences."
             )
 
-        cos = self.cos[token_positions]   # shape: (B, L, d_k)
-        sin = self.sin[token_positions]   # shape: (B, L, d_k)
+        batch_shape = x.shape[:-2]  # 例如 (B, h)
 
+        if token_positions is None:
+            base = torch.arange(seq_len, device=x.device)           # (L,)
+            view_shape = (1,) * len(batch_shape) + (seq_len,)       # (1, ..., 1, L)
+            token_positions = base.view(view_shape).expand(*batch_shape, seq_len)
+        else:
+            if token_positions.size(-1) != seq_len:
+                raise ValueError("token_positions last dim must be seq_len")
+
+            # 想要的目标形状，例如 (B, h, L)
+            target_ndim = len(batch_shape) + 1                      # +1 是 seq_len 维度
+            given_ndim = token_positions.dim()
+            pad = target_ndim - given_ndim
+            if pad < 0:
+                raise ValueError("token_positions has too many batch dims")
+
+            # 左侧补 1，然后按广播规则 expand 到目标 batch 形状
+            view_shape = (1,) * pad + token_positions.shape         # (1,...,1, *given, L)
+            token_positions = token_positions.view(view_shape).expand(*batch_shape, seq_len)
+
+
+        cos = self.cos[token_positions]   
+        sin = self.sin[token_positions]   
         h = x
         h_rot = torch.empty_like(h)
         h_rot[..., 0::2] = -h[..., 1::2]

@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import math
 from cs336_basics.linear_module import Linear
 
 class SwiGLU_FFN(nn.Module):
