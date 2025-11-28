@@ -7,7 +7,6 @@ class RMSNorm(nn.Module):
         super().__init__()
         self.eps = eps
         self.g = nn.Parameter(torch.ones(d_model, dtype=dtype, device=device))
-
     
     def forward(self,x):
         in_dtype = x.dtype

@@ -1,35 +1,8 @@
 import torch
 import torch.nn as nn
-import math
 from cs336_basics.linear_module import Linear
 from cs336_basics.Rope import Rope
-
-def softmax(x: torch.Tensor, dim: int):
-    max_vals = torch.max(x, dim=dim, keepdim=True).values
-    x_stable = x - max_vals
-    exp_x = torch.exp(x_stable)
-    sum_exp = torch.sum(exp_x, dim=dim, keepdim=True)
-    return exp_x / sum_exp
-
-def scaled_dot_product_attention(q,k,v,mask = None):
-    
-    d_k = q.size(-1)
-    scores = torch.matmul(q, k.transpose(-2, -1)) 
-    scores = scores / math.sqrt(d_k)
-
-    if mask is not None:
-        mask = mask.to(dtype=torch.bool, device=scores.device)
-        while mask.dim() < scores.dim():
-            mask = mask.unsqueeze(0)
-
-        neg_inf = torch.tensor(float("-inf"), device=scores.device, dtype=scores.dtype)
-        scores = torch.where(mask, scores, neg_inf)
-
-    attn = softmax(scores, dim=-1)
-    final = torch.matmul(attn, v)
-    return final
-
-
+from cs336_basics.scaled_dot_product_attention import scaled_dot_product_attention
 
 class CausalMultiheadSelfAttention(nn.Module):
     def __init__(
@@ -51,6 +24,7 @@ class CausalMultiheadSelfAttention(nn.Module):
         self.W_v = Linear(d_model, d_model, device=device, dtype=dtype)
         self.W_o = Linear(d_model, d_model, device=device, dtype=dtype)
 
+        #   传入了max_seq_len的值  就说明是有Rope的attention模块
         if max_seq_len is not None:
             self.rope = Rope(
                 theta=theta,
@@ -73,12 +47,16 @@ class CausalMultiheadSelfAttention(nn.Module):
         q = self.W_q(x)
         k = self.W_k(x)
         v = self.W_v(x)
-
+        
         q = q.view(B, L, h, d).transpose(1, 2)  # (B, h, L, d)
         k = k.view(B, L, h, d).transpose(1, 2)
         v = v.view(B, L, h, d).transpose(1, 2)
 
-        if self.rope is not None:         
+        #   要不要用位置编码 如果要 有没有传入位置tensor
+        if self.rope is not None: 
+            if token_positions is not None:
+                token_positions = token_positions.unsqueeze(1).expand(B, h, L)
+
             q = self.rope(q, token_positions)
             k = self.rope(k, token_positions)
 

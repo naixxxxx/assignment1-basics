@@ -2,6 +2,7 @@ import json
 import regex as re
 
 class Tokenizer:
+    PAT = re.compile(r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+""")
 
     def __init__(self, vocab, merges, special_tokens = None):
         self.vocab = vocab
@@ -40,7 +41,6 @@ class Tokenizer:
     def encode(self, text:str):
 
         id_list = []
-        PAT = re.compile(r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+""")
         if self.special_tokens:
             toks_sorted = sorted(self.special_tokens, key=len, reverse=True)
             split_pattern = "(" + "|".join(re.escape(tok) for tok in toks_sorted) + ")"
@@ -58,7 +58,7 @@ class Tokenizer:
                 if tok_id is not None:
                     id_list.append(tok_id)
             else:
-                word_list =  PAT.findall(part)
+                word_list =  self.PAT.findall(part)
                 for word in word_list:
                     word_bytes = word.encode("utf-8")
                     tokens = self._bpe(word_bytes)

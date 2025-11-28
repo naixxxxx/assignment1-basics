@@ -22,9 +22,6 @@ def train_bpe(input_path: str, vocab_size: int, special_tokens: list[str],) -> t
             word = match.group(0)
             words_counter[word] += 1
 
-
-
-
     # 第二个词表 记录字节串和频率    
     token_counter = Counter({
     tuple(bytes([b]) for b in word.encode("utf-8")): freq
