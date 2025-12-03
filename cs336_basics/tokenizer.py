@@ -17,25 +17,31 @@ class Tokenizer:
         self.inv_vocab = {v: k for k, v in self.vocab.items()}
         self.merge_ranks = {pair: i for i, pair in enumerate(self.merges)}
         
+
     @classmethod
     def from_files(cls, vocab_filepath, merges_filepath, special_tokens=None):
-        # 加载 vocab.json
-        with open(vocab_filepath, "r", encoding="utf-8") as f :
-            gpt2_vocab = json.load(f)
-        vocab = {v: k.encode("utf-8") for k,v in gpt2_vocab.items()}
+        # 读取 vocab.json
+        with open(vocab_filepath, "r", encoding="utf-8") as f:
+            vocab_json = json.load(f)  # dict[str, int]; key 是 latin-1 解码的字符串
+
+        # ✅ 用 latin-1 编码回 bytes，恢复 dict[int, bytes]
+        vocab = {
+            token_id: token_str.encode("latin-1")
+            for token_str, token_id in vocab_json.items()
+        }
 
         merges = []
         with open(merges_filepath, "r", encoding="utf-8") as f:
-            # line是文件的每一行变成字符串 parts把字符串转成列表
             for line in f:
                 line = line.strip()
                 if not line or line.startswith("#"):
                     continue
                 parts = line.split()
                 if len(parts) == 2:
-                    merge = (parts[0].encode("utf-8"), parts[1].encode("utf-8"))
-                    merges.append(merge) 
-        
+                    # ✅ 对应 bpetrain.py 里 decode("latin-1")
+                    merge = (parts[0].encode("latin-1"), parts[1].encode("latin-1"))
+                    merges.append(merge)
+
         return cls(vocab, merges, special_tokens)
 
     def encode(self, text:str):
